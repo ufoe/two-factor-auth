@@ -1,0 +1,48 @@
+#
+# Two factor auth patch schema for use with two-factor-auth
+# Author: Stas (Tylkas) Shaklein
+#
+
+# octetString SYNTAX
+attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13.1 NAME 'twoFactorToken'
+        DESC 'TwoFactor Token for TOTP'
+        EQUALITY octetStringMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.40 )
+
+# octetString SYNTAX
+attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13.2 NAME 'twoFactorIPs'
+        DESC 'TwoFactor source IPs and timestamp'
+        EQUALITY octetStringMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.40 )
+
+# integer SYNTAX
+attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13.3 NAME 'twoFactorGlobal'
+        DESC 'TwoFactor last login timestamp for global session'
+        EQUALITY integerMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+
+# boolean SYNTAX
+attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13.3.1 NAME 'twoFactorGlobalAllowed'
+        DESC 'TwoFactor permission to use global session'
+        EQUALITY booleanMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 )
+
+# integer SYNTAX
+attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13.4 NAME 'twoFactorSuccess'
+        DESC 'TwoFactor amount of success logins'
+        EQUALITY integerMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+
+# integer SYNTAX
+attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13.5 NAME 'twoFactorFail'
+        DESC 'TwoFactor amount of failed logins'
+        EQUALITY integerMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+
+
+# Class for two-factor-auth
+objectclass ( 1.3.6.1.4.1.24552.500.1.1.2.0.0 NAME 'twoFactorData' SUP top AUXILIARY
+        DESC 'MANDATORY: Two Factor Auth objectclass'
+        MAY ( twoFactorToken $ twoFactorIPs $ twoFactorGlobal $
+        twoFactorGlobalAllowed $ twoFactorSuccess $ twoFactorFail $ uid )
+        )
