@@ -11,11 +11,14 @@ QT       -= gui
 TARGET = two-factor-auth
 CONFIG   += console
 CONFIG   -= app_bundle
+LIBS += -lldap -llber
 
 TEMPLATE = app
 
 
-SOURCES += main.cpp
+SOURCES += \
+    manager.cpp \
+    libs/tfldap.cpp
 
 OTHER_FILES += \
     ldap.schema/two-factor_openldap.schema \
@@ -23,3 +26,7 @@ OTHER_FILES += \
     ldap.schema/README.md \
     README.md \
     ldap.schema/Makefile
+
+HEADERS += \
+    config.h \
+    libs/tfldap.h
