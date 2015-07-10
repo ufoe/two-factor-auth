@@ -26,10 +26,14 @@ public:
 
     TFLdap();
     ~TFLdap();
+
     int bind();
-    ldap_object search(char *);
-    ldap_object search_next();
     int tfldap_entry_count;
+
+    ldap_object search(std::string);
+    ldap_object search(std::string, char**);
+    ldap_object search_next();
+    int ldap_mod(std::string, int, char*, char *values[]);
 
 private:
     ldap_object tfldap_object;
