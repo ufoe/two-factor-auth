@@ -1,7 +1,21 @@
-#include <iostream>
-
 #include "tfldap.h"
-#include <cstdio>
+
+
+std::string ptree_dn_encode(std::string s) {
+    int pos = 0;
+    while( ( pos = s.find(".") ) != std::string::npos )
+        s.replace(pos, 1, ldap_dn_dot_replacer);
+
+    return s;
+}
+
+std::string ptree_dn_decode(std::string s) {
+    int pos = 0;
+    while( ( pos = s.find("***") ) != std::string::npos )
+        s.replace(pos, sizeof(ldap_dn_dot_replacer)/sizeof(char), ".");
+
+    return s;
+}
 
 TFLdap::TFLdap()
 {
@@ -21,6 +35,7 @@ int TFLdap::bind() {
     int res = ldap_sasl_bind_s(ld, ldap_dn, LDAP_SASL_AUTOMATIC, &cred, NULL, NULL, &server_creds);
     if ( res != LDAP_SUCCESS) {
         std::cerr << "Error occured: " << res << std::endl << ldap_err2string(res) << std::endl;
+        exit(-1);
     } else {
         std::cout << "Ldap connection established" << std::endl;
     }
@@ -28,135 +43,46 @@ int TFLdap::bind() {
     return res;
 }
 
-TFLdap::ldap_object TFLdap::search(std::string ldapfilter) {
+boost::property_tree::ptree TFLdap::search(std::string ldapfilter) {
     return TFLdap::search(ldapfilter, NULL);
 }
 
-TFLdap::ldap_object TFLdap::search(std::string ldapfilter, char **attrs) {
+boost::property_tree::ptree TFLdap::search(std::string ldapfilter, char **attrs) {
+    boost::property_tree::ptree res;
+    LDAPMessage *ldap_result;
+    BerElement *ber;
 
-    int res = ldap_search_ext_s(ld, ldap_base, LDAP_SCOPE_SUBTREE, ldapfilter.c_str(),
-                                attrs, 0, NULL, NULL, LDAP_NO_LIMIT, LDAP_NO_LIMIT, &ldap_result);
-    if ( res != LDAP_SUCCESS) {
-        std::cerr << "Error occured: " << res << std::endl << ldap_err2string(res) << std::endl;
+    int r = ldap_search_ext_s(ld, ldap_base, LDAP_SCOPE_SUBTREE,
+                              ldapfilter.c_str(), attrs, 0, NULL, NULL,
+                              LDAP_NO_LIMIT, LDAP_NO_LIMIT, &ldap_result);
+    if ( r != LDAP_SUCCESS) {
+        std::cerr << "[TFLdap::search] error occured: " << r << std::endl << ldap_err2string(r) << std::endl;
     } else {
-        entry = ldap_first_entry(ld, ldap_result);
-        tfldap_entry_count = ldap_count_entries(ld, ldap_result);
-        tfldap_object.object.clear();
 
-        // Put first value into object
-        attr = ldap_first_attribute(ld, entry, &ber);
-        values = ldap_get_values_len(ld, entry, attr);
+        // Get ldap entry
+        for (LDAPMessage *entry = ldap_first_entry(ld, ldap_result); entry != NULL; entry = ldap_next_entry(ld, entry)) {
+            // Put full DN
+            std::string fdn = ptree_dn_encode(ldap_get_dn(ld, entry));
+            res.add(fdn, "Full DN");
 
-        // Put full DN
-        tfldap_object.iter = tfldap_object.object.insert(ldap_pair("TFLdapFullDN", ldap_get_dn(ld, entry)));
-
-        // Put first attr
-        tfldap_object.object.insert(tfldap_object.iter, ldap_pair(attr, values[0]->bv_val));
-        for (int i = 1; i < ldap_count_values_len(values); i++)
-            tfldap_object.object.insert(tfldap_object.iter, ldap_pair(attr, values[i]->bv_val));
-
-        for (attr = ldap_next_attribute(ld, entry, ber); attr != NULL; attr = ldap_next_attribute(ld, entry, ber)) {
-            values = ldap_get_values_len(ld, entry, attr);
-
-            // Multiple values definition
-            for (int i = 0; i < ldap_count_values_len(values); i++)
-                tfldap_object.object.insert(tfldap_object.iter, ldap_pair(attr, values[i]->bv_val));
-            ldap_value_free_len(values);
-        }
-    }
-
-    return tfldap_object;
-}
-
-TFLdap::ldap_object TFLdap::search_next() {
-    if ( ber != NULL) {
-        tfldap_object.object.clear();
-        entry = ldap_next_entry(ld, entry);
-
-        if (entry == NULL) {
-            // Free LDAP vars
-            if ( ber != NULL )
-                ber_free(ber, 0);
-            ldap_memfree(attr);
-            ldap_msgfree(ldap_result);
-        } else {
-
-            // Put first value into object
-            attr = ldap_first_attribute(ld, entry, &ber);
-            values = ldap_get_values_len(ld, entry, attr);
-            tfldap_object.iter = tfldap_object.object.insert(ldap_pair(attr, values[0]->bv_val));
-            for (int i = 1; i < ldap_count_values_len(values); i++)
-                tfldap_object.object.insert(tfldap_object.iter, ldap_pair(attr, values[i]->bv_val));
-
-            for (attr = ldap_next_attribute(ld, entry, ber); attr != NULL; attr = ldap_next_attribute(ld, entry, ber)) {
-                values = ldap_get_values_len(ld, entry, attr);
-
-                // Multiple values definition
+            // Get attributes
+            for (char *attr = ldap_first_attribute(ld, entry, &ber); attr != NULL; attr = ldap_next_attribute(ld, entry, ber)) {
+                // Get values
+                berval **values = ldap_get_values_len(ld, entry, attr);
                 for (int i = 0; i < ldap_count_values_len(values); i++)
-                    tfldap_object.object.insert(tfldap_object.iter, ldap_pair(attr, values[i]->bv_val));
+                    res.add(fdn + std::string(".") + std::string(attr), values[i]->bv_val);
                 ldap_value_free_len(values);
             }
+            if ( ber != NULL )
+                ber_free(ber, 0);
+
+            // If entry does not have any provided attrs
+            if ( res.get_child(fdn).size() == 0 )
+                res.pop_back();
         }
+        ldap_msgfree(ldap_result);
     }
-
-    return tfldap_object;
-}
-
-int TFLdap::ldap_mod(std::string ldapfilter, int mod_op, char *attr, char *values[]) {
-
-    if ( mod_op == LDAP_MOD_INCREMENT) {
-        // Get current values
-        char *attrs[] = {attr, NULL};
-        ldap_object tfldap_res = search(ldapfilter, attrs);
-        if (tfldap_entry_count != 1) {
-            std::cerr << "Error in ldap_mod(): DN " << mod_op << " is not unique" << std::endl;
-            return -1;
-        }
-
-        char **ivalues;
-        ivalues = new char *[tfldap_res.object.size()];
-        int i = 0;
-
-        // Create new values array
-        std::multimap <std::string, std::string>::iterator iter;
-        for (iter = tfldap_res.object.begin();
-             iter != tfldap_res.object.end(); iter++) {
-            if ((*iter).first == attr ) {
-                sprintf(ivalues[i], "%s", (*iter).second.c_str());
-                std::cout << ivalues[i] << std::endl;
-                i++;
-            }
-        }
-    }
-
-    int res;
-    LDAPMod mod;
-    mod.mod_op = mod_op;
-    mod.mod_type = attr;
-    mod.mod_values = values;
-
-    LDAPMod *mods[2];
-    mods[0] = &mod;
-    mods[1] = NULL;
-
-    switch (mod_op) {
-    case LDAP_MOD_ADD:
-        res = ldap_add_ext_s(ld, ldapfilter.c_str(), mods, NULL, NULL);
-        // Try next method if attr's value is not exists
-        if ( res == LDAP_SUCCESS )
-            break;
-    case LDAP_MOD_REPLACE:
-        mods[0]->mod_op = LDAP_MOD_REPLACE;
-        res = ldap_modify_ext_s(ld, ldapfilter.c_str(), mods, NULL, NULL);
-        break;
-    default:
-        std::cerr << "Used unsupported modify method in ldap_mod(): " << mod_op << std::endl;
-        return -1;
-    }
-
-    if ( res != LDAP_SUCCESS )
-
-        std::cerr << "Error occured on ldap_mod(): " << res << std::endl << ldap_err2string(res) << std::endl;
 
     return res;
 }
+

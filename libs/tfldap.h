@@ -4,18 +4,18 @@
 #include <ldap.h>
 #include <string>
 #include <map>
+#include <iostream>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/foreach.hpp>
 
 #include "config.h"
 
-#define ldap_pair(key, value) std::pair<std::string, std::string>(key, value)
-
+std::string ptree_dn_encode(std::string);
+std::string ptree_dn_decode(std::string);
 
 class TFLdap {
     LDAP *ld;
-    LDAPMessage *ldap_result, *entry;
-    BerElement *ber;
-    berval cred, *server_creds, **values;
-    char *attr;
+    berval cred, *server_creds;
     int version = LDAP_VERSION3;
 
 public:
@@ -28,12 +28,8 @@ public:
     ~TFLdap();
 
     int bind();
-    int tfldap_entry_count;
-
-    ldap_object search(std::string);
-    ldap_object search(std::string, char**);
-    ldap_object search_next();
-    int ldap_mod(std::string, int, char*, char *values[]);
+    boost::property_tree::ptree search(std::string);
+    boost::property_tree::ptree search(std::string, char**);
 
 private:
     ldap_object tfldap_object;
