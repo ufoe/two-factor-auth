@@ -11,8 +11,8 @@ std::string ptree_dn_encode(std::string s) {
 
 std::string ptree_dn_decode(std::string s) {
     int pos = 0;
-    while( ( pos = s.find("***") ) != std::string::npos )
-        s.replace(pos, sizeof(ldap_dn_dot_replacer)/sizeof(char), ".");
+    while( ( pos = s.find(ldap_dn_dot_replacer) ) != std::string::npos )
+        s.replace(pos, sizeof(ldap_dn_dot_replacer)/sizeof(char) -1, ".");
 
     return s;
 }

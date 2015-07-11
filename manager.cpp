@@ -7,8 +7,8 @@ int main()
 
     char *attrs[] = {NULL};
     //char *attrs[] = {"userPassword", NULL};
-    //std::string dn = "objectClass=*";
-    std::string dn = "cn=*";
+    //std::string dn = "cn=*";
+    std::string dn = "objectClass=posixAccount";
     boost::property_tree::ptree ldap_res = ldap.search(dn, attrs);
 
     BOOST_FOREACH(const boost::property_tree::ptree::value_type &e, ldap_res)
