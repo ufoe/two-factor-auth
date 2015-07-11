@@ -1,17 +1,16 @@
 #include "tfldap.h"
 
-
-std::string ptree_dn_encode(std::string s) {
+string ptree_dn_encode(string s) {
     int pos = 0;
-    while( ( pos = s.find(".") ) != std::string::npos )
+    while( ( pos = s.find(".") ) != string::npos )
         s.replace(pos, 1, ldap_dn_dot_replacer);
 
     return s;
 }
 
-std::string ptree_dn_decode(std::string s) {
+string ptree_dn_decode(string s) {
     int pos = 0;
-    while( ( pos = s.find(ldap_dn_dot_replacer) ) != std::string::npos )
+    while( ( pos = s.find(ldap_dn_dot_replacer) ) != string::npos )
         s.replace(pos, sizeof(ldap_dn_dot_replacer)/sizeof(char) -1, ".");
 
     return s;
@@ -34,21 +33,21 @@ int TFLdap::bind() {
 
     int res = ldap_sasl_bind_s(ld, ldap_dn, LDAP_SASL_AUTOMATIC, &cred, NULL, NULL, &server_creds);
     if ( res != LDAP_SUCCESS) {
-        std::cerr << "Error occured: " << res << std::endl << ldap_err2string(res) << std::endl;
+        cerr << "Error occured: " << res << endl << ldap_err2string(res) << endl;
         exit(-1);
     } else {
-        std::cout << "Ldap connection established" << std::endl;
+        cout << "Ldap connection established" << endl;
     }
 
     return res;
 }
 
-boost::property_tree::ptree TFLdap::search(std::string ldapfilter) {
+ptree TFLdap::search(string ldapfilter) {
     return TFLdap::search(ldapfilter, NULL);
 }
 
-boost::property_tree::ptree TFLdap::search(std::string ldapfilter, char **attrs) {
-    boost::property_tree::ptree res;
+ptree TFLdap::search(string ldapfilter, char **attrs) {
+    ptree res;
     LDAPMessage *ldap_result;
     BerElement *ber;
 
@@ -56,13 +55,13 @@ boost::property_tree::ptree TFLdap::search(std::string ldapfilter, char **attrs)
                               ldapfilter.c_str(), attrs, 0, NULL, NULL,
                               LDAP_NO_LIMIT, LDAP_NO_LIMIT, &ldap_result);
     if ( r != LDAP_SUCCESS) {
-        std::cerr << "[TFLdap::search] error occured: " << r << std::endl << ldap_err2string(r) << std::endl;
+        cerr << "[TFLdap::search] error occured: " << r << endl << ldap_err2string(r) << endl;
     } else {
 
         // Get ldap entry
         for (LDAPMessage *entry = ldap_first_entry(ld, ldap_result); entry != NULL; entry = ldap_next_entry(ld, entry)) {
             // Put full DN
-            std::string fdn = ptree_dn_encode(ldap_get_dn(ld, entry));
+            string fdn = ptree_dn_encode(ldap_get_dn(ld, entry));
             res.add(fdn, "Full DN");
 
             // Get attributes
@@ -70,7 +69,7 @@ boost::property_tree::ptree TFLdap::search(std::string ldapfilter, char **attrs)
                 // Get values
                 berval **values = ldap_get_values_len(ld, entry, attr);
                 for (int i = 0; i < ldap_count_values_len(values); i++)
-                    res.add(fdn + std::string(".") + std::string(attr), values[i]->bv_val);
+                    res.add(fdn + string(".") + string(attr), values[i]->bv_val);
                 ldap_value_free_len(values);
             }
             if ( ber != NULL )
@@ -86,3 +85,46 @@ boost::property_tree::ptree TFLdap::search(std::string ldapfilter, char **attrs)
     return res;
 }
 
+int TFLdap::_modify_add(string fdn, int mod_op, char *attr, char **values) {
+    return 0;
+}
+
+int TFLdap::_modify_increment(string fdn, int mod_op, char *attr, char **values) {
+    return 0;
+}
+
+int TFLdap::_modify_replace(string fdn, int mod_op, char *attr, char **values) {
+    return 0;
+}
+
+int TFLdap::modify(string fdn, int mod_op, char *attr, char **values) {
+    int res;
+    switch (mod_op) {
+    case LDAP_MOD_ADD:
+        return _modify_add(fdn, mod_op, attr, values);
+    case LDAP_MOD_INCREMENT:
+        return _modify_increment(fdn, mod_op, attr, values);
+    case LDAP_MOD_REPLACE:
+        return _modify_replace(fdn, mod_op, attr, values);
+    case LDAP_MOD_INC_OR_ADD:
+        res = modify(fdn, LDAP_MOD_INCREMENT, attr, values);
+        if ( res != LDAP_SUCCESS )
+            res = modify(fdn, LDAP_MOD_ADD, attr, values);
+        return res;
+    case LDAP_MOD_ADD_OR_REPLACE:
+        res = modify(fdn, LDAP_MOD_ADD, attr, values);
+        if ( res != LDAP_SUCCESS )
+            res = modify(fdn, LDAP_MOD_REPLACE, attr, values);
+        return res;
+    case LDAP_MOD_INC_OR_ADD_OR_REPLACE:
+        res = modify(fdn, LDAP_MOD_INCREMENT, attr, values);
+        if ( res != LDAP_SUCCESS )
+            res = modify(fdn, LDAP_MOD_ADD, attr, values);
+        if ( res != LDAP_SUCCESS )
+            res = modify(fdn, LDAP_MOD_REPLACE, attr, values);
+        return res;
+    default:
+        cerr << "Used unsupported modify method in TFLdap::modify(): " << mod_op << endl;
+        return -1;
+    }
+}

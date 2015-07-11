@@ -7,18 +7,18 @@ int main()
 
     char *attrs[] = {NULL};
     //char *attrs[] = {"userPassword", NULL};
-    //std::string dn = "cn=*";
-    std::string dn = "objectClass=posixAccount";
-    boost::property_tree::ptree ldap_res = ldap.search(dn, attrs);
+    string dn = "cn=martin*";
+    //string dn = "objectClass=posixAccount";
+    ptree ldap_res = ldap.search(dn, attrs);
 
-    BOOST_FOREACH(const boost::property_tree::ptree::value_type &e, ldap_res)
+    BOOST_FOREACH(const ptree::value_type &e, ldap_res)
     {
-        if (e.second.get<std::string>("") == "Full DN")
-            std::cout << "=== " << ptree_dn_decode(e.first) << " ===" << std::endl;
-        BOOST_FOREACH(const boost::property_tree::ptree::value_type &v, ldap_res.get_child(e.first))
+        if (e.second.get<string>("") == "Full DN")
+            cout << "=== " << ptree_dn_decode(e.first) << " ===" << endl;
+        BOOST_FOREACH(const ptree::value_type &v, ldap_res.get_child(e.first))
         {
-            std::cout << v.first << ": " << v.second.get<std::string>("") << std::endl;
+            cout << v.first << ": " << v.second.get<string>("") << endl;
         }
-        std::cout << std::endl;
+        cout << endl;
     }
 }
