@@ -9,6 +9,7 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <vector>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/foreach.hpp>
 
@@ -36,9 +37,9 @@ public:
     int modify(string fdn, int mod_op, char *attr, char **values);
 
 private:
-    int _modify_add(string fdn, int mod_op, char *attr, char **values);
-    int _modify_increment(string fdn, int mod_op, char *attr, char **values);
-    int _modify_replace(string fdn, int mod_op, char *attr, char **values);
+    int _modify_add(string fdn, char *attr, char **values);
+    int _modify_increment(string fdn, char *attr, char **values);
+    int _modify_replace(string fdn, char *attr, char **values);
 };
 
 #endif // TFLDAP_H

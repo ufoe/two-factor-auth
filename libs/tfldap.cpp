@@ -85,27 +85,86 @@ ptree TFLdap::search(string ldapfilter, char **attrs) {
     return res;
 }
 
-int TFLdap::_modify_add(string fdn, int mod_op, char *attr, char **values) {
-    return 0;
+int TFLdap::_modify_add(string fdn, char *attr, char **values) {
+    LDAPMod mod;
+    mod.mod_op = LDAP_MOD_ADD;
+    mod.mod_type = attr;
+    mod.mod_values = values;
+
+    LDAPMod *mods[2];
+    mods[0] = &mod;
+    mods[1] = NULL;
+
+    int res = ldap_add_ext_s(ld, fdn.c_str(), mods, NULL, NULL);
+    if ( res != LDAP_SUCCESS )
+        cerr << "[TFLdap::_modify_add] error occured: (" << res << ") " << ldap_err2string(res) << endl;
+    return res;
 }
 
-int TFLdap::_modify_increment(string fdn, int mod_op, char *attr, char **values) {
-    return 0;
+int TFLdap::_modify_increment(string fdn, char *attr, char **values) {
+    LDAPMod mod;
+    mod.mod_op = LDAP_MOD_INCREMENT;
+    mod.mod_type = attr;
+    mod.mod_values = values;
+
+    LDAPMod *mods[2];
+    mods[0] = &mod;
+    mods[1] = NULL;
+
+    int res = ldap_modify_ext_s(ld, fdn.c_str(), mods, NULL, NULL);
+    if ( res == LDAP_SUCCESS )
+        return res;
+
+    // Gather current values
+    string dn = fdn.substr(0, fdn.find(','));
+    vector<string> res_attrs;
+    char *attrs[2] = {attr, NULL};
+    ptree sres = search(dn, attrs);
+    BOOST_FOREACH(const ptree::value_type &e, sres)
+            if (( e.second.get<string>("") == "Full DN") & ( fdn == ptree_dn_decode(e.first)))
+            BOOST_FOREACH(const ptree::value_type &v, sres.get_child(e.first))
+            if ( v.first == attr )
+            res_attrs.insert(res_attrs.end(), v.second.get<string>(""));
+
+    // Append new values
+    for ( int i = 0; i < sizeof(values)/sizeof(*values); i++)
+        res_attrs.insert(res_attrs.end(), values[i]);
+
+    // Make new array of values
+    char **res_values = new char*[res_attrs.size() + 1];
+    for (int i = 0; i < res_attrs.size(); i++)
+        res_values[i] = const_cast<char*>(res_attrs[i].c_str());
+    res_values[res_attrs.size()] = NULL;
+
+    // Execute modify ;)
+    return _modify_replace(fdn, attr, res_values);
 }
 
-int TFLdap::_modify_replace(string fdn, int mod_op, char *attr, char **values) {
-    return 0;
+int TFLdap::_modify_replace(string fdn, char *attr, char **values) {
+    LDAPMod mod;
+    mod.mod_op = LDAP_MOD_REPLACE;
+    mod.mod_type = attr;
+    mod.mod_values = values;
+
+    LDAPMod *mods[2];
+    mods[0] = &mod;
+    mods[1] = NULL;
+
+    int res = ldap_modify_ext_s(ld, fdn.c_str(), mods, NULL, NULL);
+    if ( res != LDAP_SUCCESS )
+        cerr << "[TFLdap::_modify_replace] error occured: (" << res << ") " << ldap_err2string(res) << endl;
+    return res;
 }
 
 int TFLdap::modify(string fdn, int mod_op, char *attr, char **values) {
     int res;
     switch (mod_op) {
     case LDAP_MOD_ADD:
-        return _modify_add(fdn, mod_op, attr, values);
+        return _modify_add(fdn, attr, values);
     case LDAP_MOD_INCREMENT:
-        return _modify_increment(fdn, mod_op, attr, values);
+        return _modify_increment(fdn, attr, values);
     case LDAP_MOD_REPLACE:
-        return _modify_replace(fdn, mod_op, attr, values);
+        return _modify_replace(fdn, attr, values);
     case LDAP_MOD_INC_OR_ADD:
         res = modify(fdn, LDAP_MOD_INCREMENT, attr, values);
         if ( res != LDAP_SUCCESS )
