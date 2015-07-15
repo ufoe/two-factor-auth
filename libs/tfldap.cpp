@@ -175,6 +175,9 @@ int TFLdap::modify(string fdn, int mod_op, char *attr, char **values) {
         if ( res != LDAP_SUCCESS )
             res = modify(fdn, LDAP_MOD_REPLACE, attr, values);
         return res;
+    // Use it with attention!
+    //    If even 1 value from argument is already presented in an object -
+    //    ALL attribute values will be REPLACED with a new array
     case LDAP_MOD_INC_OR_ADD_OR_REPLACE:
         res = modify(fdn, LDAP_MOD_INCREMENT, attr, values);
         if ( res != LDAP_SUCCESS )
