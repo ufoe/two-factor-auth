@@ -8,10 +8,10 @@ Dependencies:
 
 ## Manager
 ### Actions (rw)
-- :soon: Add two-factor attrs
-- :soon: Remove two-factor attrs
-- :soon: (Re)Generate TOTP token
-- :soon: (Un)Ban account
+- Add two-factor attrs
+- Remove two-factor attrs
+- :soon: (Re)generate TOTP token
+- :soon: (Un)ban account
 
 ### Reports (ro)
 - :soon: Generate QR code for TOTP token

@@ -35,15 +35,13 @@ int TFLdap::bind() {
     if ( res != LDAP_SUCCESS) {
         cerr << "Error occured: " << res << endl << ldap_err2string(res) << endl;
         exit(-1);
-    } else {
-        cout << "Ldap connection established" << endl;
     }
 
     return res;
 }
 
 ptree TFLdap::search(string ldapfilter) {
-    return TFLdap::search(ldapfilter, NULL);
+    return search(ldapfilter, NULL);
 }
 
 ptree TFLdap::search(string ldapfilter, char **attrs) {
@@ -55,7 +53,7 @@ ptree TFLdap::search(string ldapfilter, char **attrs) {
                               ldapfilter.c_str(), attrs, 0, NULL, NULL,
                               LDAP_NO_LIMIT, LDAP_NO_LIMIT, &ldap_result);
     if ( r != LDAP_SUCCESS) {
-        cerr << "[TFLdap::search] error occured: " << r << endl << ldap_err2string(r) << endl;
+        cerr << "[TFLdap::search] error occured: (" << r << ") " << ldap_err2string(r) << endl;
     } else {
 
         // Get ldap entry
@@ -83,6 +81,20 @@ ptree TFLdap::search(string ldapfilter, char **attrs) {
     }
 
     return res;
+}
+
+int TFLdap::is_dn_uniq(string searchdn) {
+    ptree res;
+
+    res = search(searchdn);
+    switch (res.size()) {
+    case 0:
+        return TFLDAP_FILTER_RES_NOT_FOUND;
+    case 1:
+        return TFLDAP_FILTER_RES_IS_UNIQ;
+    default:
+        return TFLDAP_FILTER_RES_IS_NOT_UNIQ;
+    }
 }
 
 int TFLdap::_modify_add(string fdn, char *attr, char **values) {

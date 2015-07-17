@@ -1,10 +1,6 @@
 #ifndef TFLDAP_H
 #define TFLDAP_H
 
-#define LDAP_MOD_INC_OR_ADD             (0x0201)
-#define LDAP_MOD_ADD_OR_REPLACE         (0x0202)
-#define LDAP_MOD_INC_OR_ADD_OR_REPLACE  (0x0203)
-
 #include <ldap.h>
 #include <string>
 #include <map>
@@ -17,6 +13,14 @@
 
 using namespace std;
 using namespace boost::property_tree;
+
+#define LDAP_MOD_INC_OR_ADD             (0x0201)
+#define LDAP_MOD_ADD_OR_REPLACE         (0x0202)
+#define LDAP_MOD_INC_OR_ADD_OR_REPLACE  (0x0203)
+
+#define TFLDAP_FILTER_RES_IS_UNIQ       0
+#define TFLDAP_FILTER_RES_IS_NOT_UNIQ   1
+#define TFLDAP_FILTER_RES_NOT_FOUND     -1
 
 
 string ptree_dn_encode(string);
@@ -35,6 +39,7 @@ public:
     ptree search(string ldapfilter);
     ptree search(string ldapfilter, char **attrs);
     int modify(string fdn, int mod_op, char *attr, char **values);
+    int is_dn_uniq(string searchdn);
 
 private:
     int _modify_add(string fdn, char *attr, char **values);
