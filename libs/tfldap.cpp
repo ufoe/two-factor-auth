@@ -210,7 +210,7 @@ int TFLdap::remove_value(string dn, char *attr, char *value) {
     vector<string> res_attrs;
     BOOST_FOREACH(const ptree::value_type &e, sres) {
         if ( e.second.get<string>("") == "Full DN")
-            fdn = e.first;
+            fdn = ptree_dn_decode(e.first);
         BOOST_FOREACH(const ptree::value_type &v, sres.get_child(e.first))
                 if (( v.first == attr ) & (v.second.get<string>("") != value))
                 res_attrs.insert(res_attrs.end(), v.second.get<string>(""));
@@ -222,4 +222,28 @@ int TFLdap::remove_value(string dn, char *attr, char *value) {
     res_values[res_attrs.size()] = NULL;
 
     return modify(fdn, LDAP_MOD_REPLACE, attr, res_values);
+}
+
+string TFLdap::get_value(string dn, char *attr) {
+    ptree sres = search(dn);
+    string res;
+
+    BOOST_FOREACH(const ptree::value_type &e, sres)
+        BOOST_FOREACH(const ptree::value_type &v, sres.get_child(e.first))
+                if ( v.first == attr )
+                    res = v.second.get<string>("");
+
+    return res;
+}
+
+vector<string> TFLdap::get_values(string dn, char *attr) {
+    ptree sres = search(dn);
+    vector<string> res;
+
+    BOOST_FOREACH(const ptree::value_type &e, sres)
+        BOOST_FOREACH(const ptree::value_type &v, sres.get_child(e.first))
+                if ( v.first == attr )
+                    res.insert(res.end(), v.second.get<string>(""));
+
+    return res;
 }

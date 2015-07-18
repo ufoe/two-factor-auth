@@ -10,7 +10,7 @@ Dependencies:
 ### Actions (rw)
 - Add two-factor attrs
 - Remove two-factor attrs
-- :soon: (Re)generate TOTP token
+- (Re)generate TOTP token
 - :soon: (Un)ban account
 
 ### Reports (ro)
