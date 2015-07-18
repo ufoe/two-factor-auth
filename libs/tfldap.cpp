@@ -202,3 +202,24 @@ int TFLdap::modify(string fdn, int mod_op, char *attr, char **values) {
         return -1;
     }
 }
+
+int TFLdap::remove_value(string dn, char *attr, char *value) {
+    ptree sres = search(dn);
+    string fdn;
+
+    vector<string> res_attrs;
+    BOOST_FOREACH(const ptree::value_type &e, sres) {
+        if ( e.second.get<string>("") == "Full DN")
+            fdn = e.first;
+        BOOST_FOREACH(const ptree::value_type &v, sres.get_child(e.first))
+                if (( v.first == attr ) & (v.second.get<string>("") != value))
+                res_attrs.insert(res_attrs.end(), v.second.get<string>(""));
+    }
+
+    char **res_values = new char*[res_attrs.size() + 1];
+    for (int i = 0; i < res_attrs.size(); i++)
+        res_values[i] = const_cast<char*>(res_attrs[i].c_str());
+    res_values[res_attrs.size()] = NULL;
+
+    return modify(fdn, LDAP_MOD_REPLACE, attr, res_values);
+}

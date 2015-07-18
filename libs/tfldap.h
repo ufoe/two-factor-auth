@@ -39,6 +39,7 @@ public:
     ptree search(string ldapfilter);
     ptree search(string ldapfilter, char **attrs);
     int modify(string fdn, int mod_op, char *attr, char **values);
+    int remove_value(string fdn, char *attr, char *value);
     int is_dn_uniq(string searchdn);
 
 private:

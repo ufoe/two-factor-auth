@@ -42,7 +42,9 @@ int main(int argc, char **argv)
         }
     }
 
-    // Manage two-factor class
+    /*
+     * Managing two-factor class
+     */
     if ((is_adding) | (is_deleting)) {
         if (is_adding == is_deleting) {
             cerr << "Sorry, but you can not ADD and DELETE two-factow attributes at the same time" << endl;
@@ -87,25 +89,19 @@ int main(int argc, char **argv)
 
         // Writing data
         if (is_adding) {
-            cout << "Adding two-factor object to account: " << fdn << endl;
-            cout << "  (All two-factor values will set to default)" << endl;
-            cout << "Please, confirm (yes): ";
+            cout << "Adding two-factor objectClass to account: " << fdn << endl;
 
-            string answer;
-            cin >> answer;
-            if (answer != "yes")
-                return 0;
-
-            cout << "- Object \"twoFactorData\"..." << endl;
-            ldap.modify(fdn, LDAP_MOD_INCREMENT, "objectClass", attrs_object);
-
-            for (int i = 0; i < sizeof(attrs_twofactor)/sizeof(*attrs_twofactor)-1; i++) {
-                cout << "- Attribute \"" << attrs_twofactor[i] << "\"..." << endl;
-                ldap.modify(fdn, LDAP_MOD_REPLACE, attrs_twofactor[i], attrs_twofactor_default_vals[i]);
-            }
-
+            cout << "- Object class \"" << attrs_object[0] << "\"..." << endl;
+            if (ldap.modify(fdn, LDAP_MOD_INCREMENT, "objectClass", attrs_object) == 20)
+                // (20) Type or value exists
+                cout << "Account already have two-factor attributes" << endl;
+            else
+                for (int i = 0; i < sizeof(attrs_twofactor)/sizeof(*attrs_twofactor)-1; i++) {
+                    cout << "- Attribute \"" << attrs_twofactor[i] << "\"..." << endl;
+                    ldap.modify(fdn, LDAP_MOD_REPLACE, attrs_twofactor[i], attrs_twofactor_default_vals[i]);
+                }
         } else {
-            cout << "Deleting two-factor object from account: " << fdn << endl;
+            cout << "Deleting two-factor objectClass from account: " << fdn << endl;
             cout << "Please, confirm (yes): ";
 
             string answer;
@@ -120,20 +116,8 @@ int main(int argc, char **argv)
             }
 
             // Removing object
-            ptree sres = ldap.search(dn, attrs_null);
-            vector<string> res_attrs;
-            BOOST_FOREACH(const ptree::value_type &e, sres)
-                    BOOST_FOREACH(const ptree::value_type &v, sres.get_child(e.first))
-                    if (( v.first == "objectClass" ) & (v.second.get<string>("") != attrs_object[0]))
-                    res_attrs.insert(res_attrs.end(), v.second.get<string>(""));
-
-            char **res_values = new char*[res_attrs.size() + 1];
-            for (int i = 0; i < res_attrs.size(); i++)
-                res_values[i] = const_cast<char*>(res_attrs[i].c_str());
-            res_values[res_attrs.size()] = NULL;
-
             cout << "- Object class \"" << attrs_object[0] << "\"..." << endl;
-            ldap.modify(fdn, LDAP_MOD_REPLACE, "objectClass", res_values);
+            ldap.remove_value(dn, "objectClass", attrs_object[0]);
         }
     }
 
