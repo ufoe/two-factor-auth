@@ -11,7 +11,7 @@ Dependencies:
 - Add two-factor attrs
 - Remove two-factor attrs
 - (Re)generate TOTP token
-- :soon: (Un)ban account
+- (Un)ban account
 
 ### Reports (ro)
 - :soon: Generate QR code for TOTP token
