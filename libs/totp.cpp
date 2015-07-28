@@ -44,32 +44,44 @@ unsigned char * memxor (unsigned char *dst, unsigned char* src, int src_len)
 }
 
 string TOTP::get_totp32(string stoken) {
-    unsigned char *token32 = (unsigned char*)stoken.c_str();
+
+    // Decoding from base32
+    uint8_t *token32 = (uint8_t*)stoken.c_str();
     if (!Base32::Unmap32(token32, stoken.size(), alpha)) {
         cerr << "[TOTP::get_totp32] error on unmapping input string" << endl;
         return "error";
     }
     int length = Base32::GetDecode32Length(stoken.size());
-    unsigned char *useed = new unsigned char[length];
+    uint8_t *useed = new uint8_t[length];
     if (!Base32::Decode32(token32, length, useed)) {
         cerr << "[TOTP::get_totp32] error on decoding input string" << endl;
         return "error";
     }
 
+    // Copy decoded token to required data type
     uint8_t *seed = (uint8_t*)malloc(length);
     memset(seed, 0, length);
     memcpy(seed, useed, length);
 
+    // Get unix timestamp divided by period (30 sec is default)
     uint64_t date = floor(time(NULL) / TOTP_PERIOD);
     cout << "Date: " << date << endl;
 
-    unsigned char *result = new unsigned char [TOTP_SHA_LEN];
+    // Generate HMAC-SHA1
+    uint8_t *result = new uint8_t [TOTP_SHA_LEN];
     memcpy(result, hmac_sha1(seed, length, (uint8_t *) &date, sizeof(uint64_t)), TOTP_SHA_LEN);
 
-    cout << "Bin code: " << dynamic_truncation(result, TOTP_SHA_LEN) << endl;
+    // Dynamic truncation
+    int bin = dynamic_truncation(result);
+    cout << "Bin code  (hex): \t"
+         << (bin >>24 & 0xff) << ":"
+         << (bin >>16 & 0xff) << ":"
+         << (bin >>8 & 0xff) << ":"
+         << (bin & 0xff) << endl;
 
-    uint32_t totp = dynamic_truncation(result, TOTP_SHA_LEN) % (int) pow(10, TOTP_DIGITS);
+    int totp = dynamic_truncation(result);
 
+    // Return results ... why stream? Just for fun
     ostringstream res;
     res << totp;
 
@@ -85,18 +97,22 @@ string TOTP::get_totp32(string stoken) {
     return res.str();
 }
 
-uint32_t TOTP::dynamic_truncation(uint8_t *input, int length)
+unsigned int TOTP::dynamic_truncation(uint8_t *input)
 {
-        uint32_t bin_code;
-        uint8_t offset;
+        unsigned int bin_code;
+        unsigned int offset;
 
-        offset = input[length - 1] & 0xf;
+        // Offset used to get special item number to get TOTP code
+        offset = input[TOTP_SHA_LEN - 1] & 0xf;
+
+        // Cut code
         bin_code = (input[offset] & 0x7f) << 24
                 | (input[offset+1] & 0xff) << 16
                 | (input[offset+2] & 0xff) << 8
                 | (input[offset+3] & 0xff) ;
 
-        return bin_code;
+        // Return last TOTP_DIGITS digits
+        return bin_code % (int) pow(10, TOTP_DIGITS);
 }
 
 uint8_t * TOTP::hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_len) {
