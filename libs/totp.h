@@ -46,7 +46,7 @@ public:
 
 private:
     static unsigned int dynamic_truncation(uint8_t *input);
-    static uint8_t * hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_len);
+    static void hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_len, uint8_t *result);
 
 };
 

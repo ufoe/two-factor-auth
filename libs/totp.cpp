@@ -30,19 +30,6 @@ unsigned char * TOTP::get_random_seed32(void) {
     return (unsigned char *)"error";
 }
 
-unsigned char * memxor (unsigned char *dst, unsigned char* src, int src_len)
-{
-    const char *s = (const char *)src;
-    char *d = (char *)dst;
-
-    while (src_len > 0) {
-        *d++ ^= *s++;
-        src_len--;
-    }
-
-    return dst;
-}
-
 string TOTP::get_totp32(string stoken) {
 
     // Get unix timestamp divided by period (30 sec is default)
@@ -76,51 +63,20 @@ string TOTP::get_totp32(string stoken) {
     memset(seed, 0, length);
     memcpy(seed, useed, length);
 
-//    // Get unix timestamp divided by period (30 sec is default)
-//    uint64_t date = floor(time(NULL) / TOTP_PERIOD);
-//    cout << "Date: " << date << endl;
-
     // Generate HMAC-SHA1
-    uint8_t *result = hmac_sha1(seed, length, challenge, 8);
+    uint8_t *result[TOTP_SHA_LEN];
+    hmac_sha1(seed, length, challenge, 8, result[0]);
 
 /*
     // Test for HMAC-SHA1
-    uint8_t *result = hmac_sha1((uint8_t *) "", 0, (uint8_t *) "", 0);
+    hmac_sha1((uint8_t *) "1", 1, (uint8_t *) "2", 1, result[0]);
     // Result must be equal "fb:db:1d:1b:18:aa:6c:08:32:4b:7d:64:b7:1f:b7:63:70:69:0e:1d"
+    hmac_sha1((uint8_t *) "1", 1, (uint8_t *) "2", 1, result[0]);
+    // Result must be equal "d0:75:ca:12:b8:25:9a:0b:27:43:8f:07:53:14:a3:bb:88:a9:27:b5"
 */
 
-    int offset;
-    unsigned int bin_code;
-
-    // Cut code
-    offset = 0; bin_code = 0;
-    offset = result[TOTP_SHA_LEN - 1] & 0xf;
-    bin_code = (result[offset] & 0x7f) << 24
-               | (result[offset+1] & 0xff) << 16
-               | (result[offset+2] & 0xff) << 8
-               | (result[offset+3] & 0xff) ;
     // Return last TOTP_DIGITS digits
-    int totp = bin_code % (int) pow(10.0, TOTP_DIGITS);
-    cout << "Bin code  (hex): \t"
-         << (totp >>24 & 0xff) << ":"
-         << (totp >>16 & 0xff) << ":"
-         << (totp >>8 & 0xff) << ":"
-         << (totp & 0xff) << endl;
-
-    // Debug output
-    cout << "Result #2 (hex):\t";
-    for (int i=0; i< TOTP_SHA_LEN; i++)
-        cout << (i==0?"":":") << hex << setw(2) << (int)result[i];
-    cout << endl;
-
-    offset = 0; bin_code = 0;
-    offset = result[TOTP_SHA_LEN - 1] & 0xf;
-    bin_code = (result[offset] & 0x7f) << 24
-               | (result[offset+1] & 0xff) << 16
-               | (result[offset+2] & 0xff) << 8
-               | (result[offset+3] & 0xff) ;
-    // Return last TOTP_DIGITS digits
-    totp = bin_code % (int) pow(10.0, TOTP_DIGITS);
+    unsigned int totp = dynamic_truncation(result[0]);
     cout << "Bin code  (hex): \t"
          << (totp >>24 & 0xff) << ":"
          << (totp >>16 & 0xff) << ":"
@@ -147,32 +103,23 @@ string TOTP::get_totp32(string stoken) {
 unsigned int TOTP::dynamic_truncation(uint8_t *input)
 {
     // Offset used to get special item number to get TOTP code
-    int offset = (int) (input[TOTP_SHA_LEN - 1] & 0xf);
-    cout << offset << endl;
+    int offset = input[TOTP_SHA_LEN - 1] & 0xf;
 
-//        // Cut code
-//        bin_code = (input[offset] & 0x7f) << 24
-//                | (input[offset+1] & 0xff) << 16
-//                | (input[offset+2] & 0xff) << 8
-//                | (input[offset+3] & 0xff) ;
-
-//        // Return last TOTP_DIGITS digits
-//        return bin_code % (int) pow(10.0, TOTP_DIGITS);
-
+    // Cut code
     unsigned int bin_code = 0;
     for (int i = 0; i < 4; ++i) {
         bin_code <<= 8;
         bin_code  |= input[offset + i];
     }
 
-    // Truncate to a smaller number of digits.
+    // Return last TOTP_DIGITS digits
     bin_code &= 0x7FFFFFFF;
     bin_code %= (int) pow(10.0, TOTP_DIGITS);
 
     return bin_code;
 }
 
-uint8_t * TOTP::hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_len) {
+void TOTP::hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_len, uint8_t *ressha) {
 
     // Adjusting key length
     uint8_t adj_key[TOTP_SHA_BLOCK];
@@ -184,9 +131,6 @@ uint8_t * TOTP::hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_l
     else
         memcpy(adj_key, key, key_len);
 
-    uint8_t ressha[TOTP_SHA_LEN];
-    memset(ressha, 0, TOTP_SHA_LEN);
-
     // Debug output
     cout << setfill('0');
     cout << "Result #0 (hex):\t";
@@ -197,7 +141,6 @@ uint8_t * TOTP::hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_l
     // Calculate with inner digits
     uint8_t ipad[TOTP_SHA_BLOCK];
     memset(ipad, TOTP_IN_DIG, TOTP_SHA_BLOCK);
-    //ipad = memxor(ipad, key, TOTP_SHA_BLOCK);
     for (int i=0; i<TOTP_SHA_BLOCK; i++)
         ipad[i] ^= adj_key[i];
 
@@ -216,7 +159,6 @@ uint8_t * TOTP::hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_l
     // Calculate with outer digits
     uint8_t opad[TOTP_SHA_BLOCK];
     memset(opad, TOTP_OUT_DIG, TOTP_SHA_BLOCK);
-//    opad = memxor(opad, adj_key, TOTP_SHA_BLOCK);
     for (int i=0; i<TOTP_SHA_BLOCK; i++)
         opad[i] ^= adj_key[i];
 
@@ -232,5 +174,4 @@ uint8_t * TOTP::hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_l
         cout << (i==0?"":":") << hex << setw(2) << (int)ressha[i];
     cout << endl;
 
-    return ressha;
 }

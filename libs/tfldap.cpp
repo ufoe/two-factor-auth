@@ -133,10 +133,11 @@ int TFLdap::_modify_increment(string fdn, char *attr, char **values) {
     char *attrs[2] = {attr, NULL};
     ptree sres = search(dn, attrs);
     BOOST_FOREACH(const ptree::value_type &e, sres)
-            if (( e.second.get<string>("") == "Full DN") & ( fdn == ptree_dn_decode(e.first)))
+            if (( e.second.get<string>("") == "Full DN") & ( fdn == ptree_dn_decode(e.first))) {
             BOOST_FOREACH(const ptree::value_type &v, sres.get_child(e.first))
             if ( v.first == attr )
             res_attrs.insert(res_attrs.end(), v.second.get<string>(""));
+            }
 
     // Append new values
     for ( int i = 0; i < sizeof(values)/sizeof(*values); i++)
