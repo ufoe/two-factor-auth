@@ -4,19 +4,21 @@
 #include "libs/tfldap.h"
 #include "libs/totp.h"
 
-
+#include <boost/array.hpp>
 void show_help(char *name);
 int check_uniq_account(TFLdap *ldap, string dn, string *fdn);
 
 
 int main(int argc, char **argv)
 {
+
     int c;
     string ban = "";
     bool with_args = false;
     bool is_adding = false;
     bool is_deleting = false;
     bool todo_token = false;
+    bool todo_qr = false;
     char *attrs_null[] = {NULL};
     char *attrs_object[] = {"twoFactorData", NULL};
     char *attrs_twofactor[] = {"twoFactorToken", "twoFactorIPs",
@@ -35,7 +37,7 @@ int main(int argc, char **argv)
     // Turn off getopt errors
     opterr = 0;
 
-    while ( (c = getopt(argc, argv, "ab:df:t")) != -1 ) {
+    while ( (c = getopt(argc, argv, "ab:df:tq")) != -1 ) {
         with_args = true;
         switch (c) {
         case 'a':
@@ -58,6 +60,9 @@ int main(int argc, char **argv)
             continue;
         case 't':
             todo_token = true;
+            continue;
+        case 'q':
+            todo_qr = true;
             continue;
         case '?':
             if ((optopt == 'f') | (optopt == 'b'))
@@ -145,21 +150,12 @@ int main(int argc, char **argv)
         }
 
         char *values[2] = {NULL, NULL};
-        cout << "Enter new token (leave empty to generate random): ";
-        string token = "";
-        getline(cin, token);
+        cout << "- Generating random token..." << endl;
+        string token = (const char*)TOTP::get_random_seed32();
 
-        if (token.size() == 0) {
-            cout << "- Generating random token..." << endl;
-            uint8_t *seed = totp::get_random_seed();
-            ostringstream token;
-            for (uint i = 0; i < SEED_LEN; i++)
-                token << (char)seed[i];
-            values[0] = const_cast<char*>(token.str().c_str());
-        } else {
-            values[0] = const_cast<char*>(token.c_str());
-        }
+        values[0] = const_cast<char*>(token.c_str());
         cout << "- Replacing current token..." << endl;
+        cout << "[DEBUG] token: " << token << endl;
         ldap.modify(fdn, LDAP_MOD_REPLACE, attrs_twofactor[0], values);
     }
 
@@ -196,6 +192,46 @@ int main(int argc, char **argv)
         ldap.modify(fdn, LDAP_MOD_REPLACE, attrs_twofactor[2], values);
     }
 
+    if (todo_qr) {
+        // Check for unique account
+        if ( check_uniq_account(&ldap, dn, &fdn) != 1 )
+            return 0;
+
+        // Check two-factor class exist
+        vector<string> chck = ldap.get_values(dn, "objectClass");
+        bool fail = true;
+        for (vector<string>::iterator it = chck.begin() ; it != chck.end(); ++it)
+            if (*it == attrs_object[0])
+                fail = false;
+        if (fail) {
+            cerr << "Object haven't two-factor class yet" << endl;
+            return 0;
+        }
+
+//        string asdasd = "I hate base32";
+//        cout << "Source string: " << asdasd << endl;
+
+//        int len = Base32::GetEncode32Length(asdasd.size()) ;
+//        unsigned char *encoded = new unsigned char [ len ];
+//        Base32::Encode32((unsigned char*)asdasd.c_str(), asdasd.size(),  encoded);
+//        cout << "Encoded string: " << encoded << endl;
+
+//        Base32::Map32(encoded, len, alpha);
+//        cout << "Mapped encoded string: " << encoded << endl;
+
+//        Base32::Unmap32(encoded, len, alpha);
+//        cout << "Unmapped encoded string: " << encoded << endl;
+
+//        unsigned char *decoded = new unsigned char [ Base32::GetDecode32Length(len) ];
+//        Base32::Decode32(encoded, len,  decoded);
+//        cout << "Decoded string: " << decoded << endl;
+
+
+        cout << "Account: " << fdn << endl;
+        cout << "Token: " << ldap.get_value(dn, attrs_twofactor[0]) << endl;
+        cout << "TOTP code32: " << TOTP::get_totp32(ldap.get_value(dn, attrs_twofactor[0])) << endl;
+    }
+
     return 0;
 }
 
@@ -218,7 +254,7 @@ int check_uniq_account(TFLdap *ldap, string dn, string *fdn) {
     ptree ldap_res;
 
     if (dn.size() == 0) {
-        cerr << "Please, specify ldap filter (-u)" << endl;
+        cerr << "Please, specify ldap filter (-f)" << endl;
         return -1;
     }
 

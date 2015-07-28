@@ -6,6 +6,8 @@
 #ifndef TOTP_H
 #define TOTP_H
 
+#include "libs/Base32.h"
+
 #include <stdint-gcc.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
@@ -14,29 +16,39 @@
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 #include <cstring>
+#include <iostream>
+#include <time.h>
+#include <sstream>
+#include <math.h>
 
-//#include <inttypes.h>
-//#include <math.h>
-//#include <stdint.h>
-//#include <stdbool.h>
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include <termios.h>
-//#include <time.h>
-//#include <unistd.h>
 
-#define SEED_LEN 32
+#define TOTP_SEED_LEN 16
+#define TOTP_DIGITS 6
+#define TOTP_PERIOD 30
+#define TOTP_SHA_LEN 20
+#define TOTP_SHA_BLOCK 64
 
-class totp
+#define TOTP_IN_DIG 0x36
+#define TOTP_OUT_DIG 0x5c
+
+#define alpha (unsigned char *)"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+
+using namespace std;
+
+class TOTP
 {
 public:
-    totp();
-    ~totp();
+    TOTP();
+    ~TOTP();
 
-    static uint8_t * base64_encode(uint8_t *input, int length);
-    static uint8_t * base64_decode(uint8_t *input, int length);
-    static uint8_t * get_random_seed(void);
+    static unsigned char * get_random_seed32(void);
+    static string get_totp32(string);
+
+private:
+    static uint32_t dynamic_truncation(uint8_t *input, int length);
+//    static unsigned char * hmac_sha1(unsigned char * key, int key_len, unsigned char * data, int data_len);
+//    static unsigned char * hmac_sha1(unsigned char * key, int key_len, unsigned char * data, int data_len);
+    static uint8_t * hmac_sha1(uint8_t * key, int key_len, uint8_t * data, int data_len);
 
 };
 

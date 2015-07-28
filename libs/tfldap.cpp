@@ -33,7 +33,7 @@ int TFLdap::bind() {
 
     int res = ldap_sasl_bind_s(ld, ldap_dn, LDAP_SASL_AUTOMATIC, &cred, NULL, NULL, &server_creds);
     if ( res != LDAP_SUCCESS) {
-        cerr << "Error occured: " << res << endl << ldap_err2string(res) << endl;
+        cerr << "[TFLdap::bind] Error occured: " << res << endl << ldap_err2string(res) << endl;
         exit(-1);
     }
 

@@ -19,7 +19,8 @@ TEMPLATE = app
 SOURCES += \
     manager.cpp \
     libs/tfldap.cpp \
-    libs/totp.cpp
+    libs/totp.cpp \
+    libs/Base32.cpp
 
 OTHER_FILES += \
     ldap.schema/two-factor_openldap.schema \
@@ -31,4 +32,5 @@ OTHER_FILES += \
 HEADERS += \
     config.h \
     libs/tfldap.h \
-    libs/totp.h
+    libs/totp.h \
+    libs/Base32.h
