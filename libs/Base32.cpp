@@ -27,7 +27,7 @@ int Base32::GetDecode32Length(int bytes)
 static bool Encode32Block(unsigned char* in5, unsigned char* out8)
 {
       // pack 5 bytes
-      unsigned long long int buffer = 0;
+      unsigned long int buffer = 0;
       for(int i = 0; i < 5; i++)
       {
 		  if(i != 0)
@@ -79,7 +79,7 @@ bool Base32::Encode32(unsigned char* in, int inLen, unsigned char* out)
 static bool Decode32Block(unsigned char* in8, unsigned char* out5)
 {
       // pack 8 bytes
-      unsigned long long int buffer = 0;
+      unsigned long int buffer = 0;
       for(int i = 0; i < 8; i++)
       {
 		  // input check

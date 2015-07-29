@@ -3,7 +3,6 @@
 
 #include <ldap.h>
 #include <string>
-#include <map>
 #include <iostream>
 #include <vector>
 #include <boost/property_tree/ptree.hpp>

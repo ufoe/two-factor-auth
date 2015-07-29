@@ -2,7 +2,7 @@
 
 string ptree_dn_encode(string s) {
     int pos = 0;
-    while( ( pos = s.find(".") ) != string::npos )
+    while( ( pos = s.find(".") ) != -1 )
         s.replace(pos, 1, ldap_dn_dot_replacer);
 
     return s;
@@ -10,7 +10,7 @@ string ptree_dn_encode(string s) {
 
 string ptree_dn_decode(string s) {
     int pos = 0;
-    while( ( pos = s.find(ldap_dn_dot_replacer) ) != string::npos )
+    while( ( pos = s.find(ldap_dn_dot_replacer) ) != -1 )
         s.replace(pos, sizeof(ldap_dn_dot_replacer)/sizeof(char) -1, ".");
 
     return s;
@@ -140,12 +140,12 @@ int TFLdap::_modify_increment(string fdn, char *attr, char **values) {
             }
 
     // Append new values
-    for ( int i = 0; i < sizeof(values)/sizeof(*values); i++)
+    for ( unsigned int i = 0; i < sizeof(values)/sizeof(*values); i++)
         res_attrs.insert(res_attrs.end(), values[i]);
 
     // Make new array of values
     char **res_values = new char*[res_attrs.size() + 1];
-    for (int i = 0; i < res_attrs.size(); i++)
+    for ( unsigned int i = 0; i < res_attrs.size(); i++)
         res_values[i] = const_cast<char*>(res_attrs[i].c_str());
     res_values[res_attrs.size()] = NULL;
 
@@ -218,7 +218,7 @@ int TFLdap::remove_value(string dn, char *attr, char *value) {
     }
 
     char **res_values = new char*[res_attrs.size() + 1];
-    for (int i = 0; i < res_attrs.size(); i++)
+    for ( unsigned int i = 0; i < res_attrs.size(); i++)
         res_values[i] = const_cast<char*>(res_attrs[i].c_str());
     res_values[res_attrs.size()] = NULL;
 

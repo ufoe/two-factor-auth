@@ -2,7 +2,7 @@
 #include <ctime>
 #include <cstdio>
 #include "libs/tfldap.h"
-#include "libs/totp.h"
+#include "libs/tftotp.h"
 
 #include <boost/array.hpp>
 void show_help(char *name);
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
         case 'b':
             ban.append(optarg);
             if ( ban != "-" )
-                for ( int i = 0 ; i < ban.size() ; i++ )
+                for ( unsigned int i = 0 ; i < ban.size() ; i++ )
                     if ( !isdigit(ban[i]) ) {
                         cerr << "Argument -b requires a number or \"-\" (" << ban << " NaN)" << endl;
                         exit(-1);
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
 
         char *values[2] = {NULL, NULL};
         cout << "- Generating random token..." << endl;
-        string token = (const char*)TOTP::get_random_seed32();
+        string token = ""; //(const char*)TOTP::get_random_seed32();
 
         values[0] = const_cast<char*>(token.c_str());
         cout << "- Replacing current token..." << endl;
@@ -229,7 +229,8 @@ int main(int argc, char **argv)
 
         cout << "Account: " << fdn << endl;
         cout << "Token: " << ldap.get_value(dn, attrs_twofactor[0]) << endl;
-        cout << "TOTP code32: " << TOTP::get_totp32(ldap.get_value(dn, attrs_twofactor[0])) << endl;
+        TFTOTP totp(ldap.get_value(dn, attrs_twofactor[0]));
+        cout << "TOTP code32: " << totp.generateCode() << endl;
     }
 
     return 0;

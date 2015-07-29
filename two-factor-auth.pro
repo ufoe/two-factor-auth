@@ -12,6 +12,7 @@ TARGET = two-factor-auth
 CONFIG   += console
 CONFIG   -= app_bundle
 LIBS += -lldap -llber -lcrypto
+QMAKE_CXXFLAGS += -Wno-write-strings -Wall -Wextra -Werror -pedantic
 
 TEMPLATE = app
 
@@ -19,12 +20,14 @@ TEMPLATE = app
 SOURCES += \
     manager.cpp \
     libs/tfldap.cpp \
-    libs/totp.cpp \
-    libs/Base32.cpp
+    libs/Base32.cpp \
+    libs/tftotp.cpp
 
 OTHER_FILES += \
     ldap.schema/two-factor_openldap.schema \
     .gitignore \
+    libs/totp.cpp \
+    libs/totp.h \
     ldap.schema/README.md \
     README.md \
     ldap.schema/Makefile
@@ -32,5 +35,5 @@ OTHER_FILES += \
 HEADERS += \
     config.h \
     libs/tfldap.h \
-    libs/totp.h \
-    libs/Base32.h
+    libs/Base32.h \
+    libs/tftotp.h
